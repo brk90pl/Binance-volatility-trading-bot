@@ -415,12 +415,13 @@ def sell_external_signals():
 
 def balance_report(last_price):
 
-    global trade_wins, trade_losses, session_profit_incfees_perc, session_profit_incfees_total
+    global trade_wins, trade_losses, session_profit_incfees_perc, session_profit_incfees_total,unrealised_session_profit_incfees_perc,unrealised_session_profit_incfees_total 
     unrealised_session_profit_incfees_perc = 0
     unrealised_session_profit_incfees_total = 0
 
     BUDGET = TRADE_SLOTS * TRADE_TOTAL
     exposure_calcuated = 0
+    my_table = PrettyTable()
 
     for coin in list(coins_bought):
         LastPrice = float(last_price[coin]['price'])
@@ -436,6 +437,19 @@ def balance_report(last_price):
 
         # unrealised_session_profit_incfees_perc = float(unrealised_session_profit_incfees_perc + PriceChangeIncFees_Perc)
         unrealised_session_profit_incfees_total = float(unrealised_session_profit_incfees_total + PriceChangeIncFees_Total)
+
+        time_held = timedelta(seconds=datetime.now().timestamp()-int(str(coins_bought[coin]['timestamp'])[:10]))
+        change_perc = (float(last_price[coin]['price']) - float(coins_bought[coin]['bought_at']))/float(coins_bought[coin]['bought_at']) * 100
+        ProfitExFees = float(last_price[coin]['price']) - float(coins_bought[coin]['bought_at'])
+        my_table.add_row([f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{coin}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['volume']):.6f}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['bought_at']):.6f}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(last_price[coin]['price']):.6f}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['take_profit']):.4f}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['stop_loss']):.4f}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{change_perc:.4f}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{(float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at'])*change_perc)/100:.6f}{txcolors.DEFAULT}",
+                        f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{str(time_held).split('.')[0]}{txcolors.DEFAULT}"])
 
     unrealised_session_profit_incfees_perc = (unrealised_session_profit_incfees_total / BUDGET) * 100
 
@@ -493,6 +507,7 @@ def balance_report(last_price):
     print(f'Win Ratio       : {float(WIN_LOSS_PERCENT):g}%')
     print(f'')
     print(f'External Signals: {extsigs}')
+    print(f"API Call count: {client.response.headers['x-mbx-used-weight-1m']}")
     print(f'--------')
     print(f'')
     #msg1 = str(bot_started_datetime) + " | " + str(datetime.now() - bot_started_datetime)
@@ -1081,16 +1096,21 @@ def update_portfolio(orders, last_price, volume):
             json.dump(coins_bought, file, indent=4)
 
 def update_bot_stats():
-    global trade_wins, trade_losses, historic_profit_incfees_perc, historic_profit_incfees_total
+    
+    global trade_wins, trade_losses, historic_profit_incfees_perc, historic_profit_incfees_total,unrealised_session_profit_incfees_total,unrealised_session_profit_incfees_perc,session_profit_incfees_perc,session_profit_incfees_total,trade_wins,trade_losses
 
     bot_stats = {
-        'total_capital' : TRADE_SLOTS * TRADE_TOTAL,
+        'total_capital' : str(TRADE_SLOTS * TRADE_TOTAL),
         'botstart_datetime' : str(bot_started_datetime),
         'historicProfitIncFees_Percent': historic_profit_incfees_perc,
         'historicProfitIncFees_Total': historic_profit_incfees_total,
         'tradeWins': trade_wins,
         'tradeLosses': trade_losses,
-        'market_startprice': market_startprice
+        'market_startprice': market_startprice,
+        'unrealised_session_profit_incfees_total' : unrealised_session_profit_incfees_total,
+        'unrealised_session_profit_incfees_perc' : unrealised_session_profit_incfees_perc,
+        'session_profit_incfees_perc' : session_profit_incfees_perc,
+        'session_profit_incfees_total' :session_profit_incfees_total
     }
 
     #save session info for through session portability
